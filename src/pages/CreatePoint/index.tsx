@@ -1,14 +1,79 @@
-import React from "react";
+import React, { useEffect, useState, ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { FiArrowLeft } from "react-icons/fi";
 import { Map, TileLayer, Marker } from "react-leaflet";
 
+import axios from "axios";
+import api from "../../services/api";
+
 import "./styles.css";
 
 import logo from "../../assets/logo.svg";
-import { tileLayer } from "leaflet";
+
+//sempre que é criado um estado para um array ou para um objeto,  precisamos manualmente informar
+// o tipo da variável que será armazenada ali dentro.
+
+interface Item {
+  title: string;
+  image_url: string;
+}
+
+interface Uf {
+  sigla: string;
+  nome: string;
+}
+
+interface City {
+  id: number;
+  nome: string;
+}
 
 const CreatePoint = () => {
+  const [items, setItems] = useState<Item[]>([]);
+  const [ufs, setUfs] = useState<Uf[]>([]);
+  const [selectedUfs, setSelectedUfs] = useState("0");
+  const [cities, setCities] = useState<City[]>([]);
+  const [selectedCity, setSelectedCity] = useState("0");
+
+  useEffect(() => {
+    api.get("items").then((response) => {
+      setItems(response.data);
+    });
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get("https://servicodados.ibge.gov.br/api/v1/localidades/estados")
+      .then((response) => {
+        setUfs(response.data);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUfs}/municipios
+`
+      )
+      .then((response) => {
+        setCities(response.data);
+      });
+  }, [selectedUfs]);
+
+  function handleSelectUf(event: ChangeEvent<HTMLSelectElement>) {
+    const value = event.target.value;
+
+    if (value === "0") return;
+    setSelectedUfs(value);
+  }
+
+  function handleSelectCity(event: ChangeEvent<HTMLSelectElement>) {
+    const value = event.target.value;
+
+    if (value === "0") return;
+    setSelectedCity(value);
+  }
+
   return (
     <div id="page-create-point">
       <header>
@@ -56,14 +121,35 @@ const CreatePoint = () => {
           <div className="field-group">
             <div className="field">
               <label>Estado (UF)</label>
-              <select name="uf" id="uf">
+              <select
+                name="uf"
+                id="uf"
+                value={selectedUfs}
+                onChange={handleSelectUf}
+              >
                 <option value="0">Selecione uma UF</option>
+                {ufs.map((uf) => (
+                  <option key={uf.sigla} value={uf.sigla}>
+                    {uf.nome}
+                  </option>
+                ))}
+                ;
               </select>
             </div>
             <div className="field">
               <label>Cidade</label>
-              <select name="city" id="city">
+              <select
+                name="city"
+                id="city"
+                value={selectedCity}
+                onChange={handleSelectCity}
+              >
                 <option value="0">Selecione uma cidade</option>
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.nome}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -74,30 +160,12 @@ const CreatePoint = () => {
             <span>Selecione um ou mais ítens de abaixo</span>
           </legend>
           <ul className="items-grid">
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
-            <li>
-              <img src="http://localhost:3333/uploads/oleo.svg" alt="oleo" />
-              <span>Óleo de cozinha</span>
-            </li>
+            {items.map((item, index) => (
+              <li key={index}>
+                <img src={item.image_url} alt="oleo" />
+                <span>{item.title}</span>
+              </li>
+            ))}
           </ul>
         </fieldset>
         <button>Cadastrar ponto de coleta</button>
